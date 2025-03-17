@@ -12,20 +12,42 @@ import {
   VStack,
   useToast,
 } from '@chakra-ui/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppStore } from '../store';
 import { initGemini } from '../config/gemini';
 
 const ConfigModal = () => {
   const toast = useToast();
   const [apiKey, setApiKey] = useState('');
-  const [modelName, setModelName] = useState('gemini-2.0-flash-exp-image-generation');
+  const [modelName, setModelName] = useState('gemini-pro-vision');
+
+  useEffect(() => {
+    const savedConfig = localStorage.getItem('geminiConfig');
+    if (savedConfig) {
+      const config = JSON.parse(savedConfig);
+      setApiKey(config.apiKey || '');
+      setModelName(config.modelName || 'gemini-2.0-flash-exp-image-generation');
+      // 自动初始化配置
+      try {
+        initGemini(config);
+        setConfig(config);
+      } catch (error) {
+        console.error('Failed to initialize config:', error);
+      }
+    }
+  }, []);
   const setConfig = useAppStore((state) => state.setConfig);
   const setShowConfig = useAppStore((state) => state.setShowConfig);
   const showConfig = useAppStore((state) => state.showConfig);
 
   const handleSubmit = () => {
-    const config = { apiKey, modelName };
+    const config = {
+      apiKey,
+      modelName,
+      generateConfig: {
+        responseModalities: ['Text', 'Image']
+      }
+    };
     try {
       initGemini(config);
       setConfig(config);

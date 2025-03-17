@@ -1,62 +1,22 @@
-import { ChakraProvider, Box, Grid, GridItem, Text, Center, extendTheme } from '@chakra-ui/react';
-
-const theme = extendTheme({
-  styles: {
-    global: {
-      body: {
-        bg: 'white',
-      },
-    },
-  },
-});
-import { QueryClient, QueryClientProvider } from 'react-query';
-import { useEffect, Component, ReactNode } from 'react';
+import { Box, Grid, GridItem, ChakraProvider, IconButton, Flex, Center, Text } from '@chakra-ui/react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { useAppStore } from './store';
+import { queryClient } from './config/query';
+import { theme } from './config/theme';
 import SessionList from './components/SessionList';
 import ChatWindow from './components/ChatWindow';
 import ConfigModal from './components/ConfigModal';
-import { useAppStore } from './store';
-
-const queryClient = new QueryClient();
-
-class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error?: Error }> {
-  constructor(props: { children: ReactNode }) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: any) {
-    console.error('React Error Boundary caught an error:', error);
-    console.error('Component Stack:', errorInfo.componentStack);
-    const { addLog } = useAppStore.getState();
-    addLog('error', 'React Error Boundary caught an error', { error, errorInfo });
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <Center h="100vh" flexDirection="column" gap={4}>
-          <Text fontSize="xl">应用加载出错，请刷新页面重试</Text>
-          {process.env.NODE_ENV === 'development' && this.state.error && (
-            <Text fontSize="sm" color="red.500" maxW="600px" whiteSpace="pre-wrap">
-              {this.state.error.message}
-            </Text>
-          )}
-        </Center>
-      );
-    }
-    return this.props.children;
-  }
-}
+import SettingsPage from './components/SettingsPage';
+import ErrorBoundary from './components/ErrorBoundary';
+import { SettingsIcon } from '@chakra-ui/icons';
 
 function App() {
   const isConfigured = useAppStore((state) => state.isConfigured);
   const showConfig = useAppStore((state) => state.showConfig);
   const setConfig = useAppStore((state) => state.setConfig);
   const addLog = useAppStore((state) => state.addLog);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     addLog('info', '应用初始化');
@@ -83,18 +43,31 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ChakraProvider theme={theme}>
         <Box h="100vh" p={4}>
-          <Grid
-            templateColumns="250px 1fr"
-            gap={4}
-            h="full"
-          >
-            <GridItem>
-              <SessionList />
-            </GridItem>
-            <GridItem>
-              <ChatWindow />
-            </GridItem>
-          </Grid>
+          <Flex direction="column" h="full">
+            <Flex justify="flex-end" mb={4}>
+              <IconButton
+                aria-label="Settings"
+                icon={<SettingsIcon />}
+                onClick={() => setShowSettings(!showSettings)}
+              />
+            </Flex>
+            {showSettings ? (
+              <SettingsPage />
+            ) : (
+              <Grid
+                templateColumns="250px 1fr"
+                gap={4}
+                flex={1}
+              >
+                <GridItem>
+                  <SessionList />
+                </GridItem>
+                <GridItem>
+                  <ChatWindow />
+                </GridItem>
+              </Grid>
+            )}
+          </Flex>
           {!isConfigured || showConfig ? <ConfigModal /> : null}
         </Box>
       </ChakraProvider>

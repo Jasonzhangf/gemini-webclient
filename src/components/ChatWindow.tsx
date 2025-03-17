@@ -102,17 +102,18 @@ const ChatWindow = () => {
 
       const result = await model.generateContent([input, ...imagesParts]);
       const response = await result.response;
+      const text = response.text();
       const candidates = response.candidates || [];
       const parts = candidates[0]?.content?.parts || [];
       
-      if (!response.text() && !parts.some(part => part.inlineData?.mimeType?.startsWith('image/'))) {
+      if (!text && !parts.some(part => part.inlineData?.mimeType?.startsWith('image/'))) {
         throw new Error('未收到AI的回复');
       }
 
       const modelMessage: ChatMessage = {
         id: Date.now().toString(),
         role: 'model',
-        content: response.text() || '',
+        content: text || '',
         timestamp: Date.now(),
         images: parts
           .filter(part => part.inlineData?.mimeType?.startsWith('image/'))
@@ -146,6 +147,8 @@ const ChatWindow = () => {
               borderRadius="md"
               alignSelf={message.role === 'user' ? 'flex-end' : 'flex-start'}
               maxW="70%"
+              cursor="pointer"
+              title="双击复用此消息"
             >
               {message.images?.map((image, index) => (
                 <Image
@@ -154,12 +157,19 @@ const ChatWindow = () => {
                   maxH="200px"
                   mb={2}
                   borderRadius="md"
-                  cursor="pointer"
-                  onDoubleClick={() => setImages(prev => [...prev, image])}
-                  title="双击添加到发送区域"
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    setImages([image]);
+                  }}
                 />
               ))}
-              <Text>{message.content}</Text>
+              <Text onDoubleClick={(e) => {
+                e.stopPropagation();
+                setInput(message.content);
+                if (message.images?.length) {
+                  setImages(message.images);
+                }
+              }}>{message.content}</Text>
             </Box>
           ))}
           <div ref={messagesEndRef} />
