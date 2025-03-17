@@ -9,6 +9,12 @@ interface LogEntry {
   details?: any;
 }
 
+interface User {
+  username: string;
+  isLoggedIn: boolean;
+  rememberMe: boolean;
+}
+
 interface AppState {
   config: GeminiConfig | null;
   sessions: ChatSession[];
@@ -16,6 +22,7 @@ interface AppState {
   isConfigured: boolean;
   showConfig: boolean;
   logs: LogEntry[];
+  user: User | null;
   setConfig: (config: GeminiConfig) => void;
   setSessions: (sessions: ChatSession[]) => void;
   setCurrentSession: (session: ChatSession | null) => void;
@@ -23,6 +30,7 @@ interface AppState {
   addMessage: (message: ChatMessage) => void;
   updateSession: (session: ChatSession) => void;
   addLog: (level: LogEntry['level'], message: string, details?: any) => void;
+  setUser: (user: User | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -32,8 +40,16 @@ export const useAppStore = create<AppState>((set) => ({
   isConfigured: false,
   showConfig: false,
   logs: [],
+  user: null,
 
-  setConfig: (config) => set({ config, isConfigured: true }),
+  setConfig: (config) => {
+    openGeminiDB().then(db => {
+      db.put('config', { ...config, id: 'default' }).catch(error => {
+        console.error('Failed to save config:', error);
+      });
+    });
+    set({ config, isConfigured: true });
+  },
   setSessions: (sessions) => set({ sessions }),
   setShowConfig: (show) => set({ showConfig: show }),
   setCurrentSession: (session) => set({ currentSession: session }),
@@ -69,4 +85,5 @@ export const useAppStore = create<AppState>((set) => ({
     set((state) => ({
       logs: [...state.logs, { timestamp: Date.now(), level, message, details }],
     })),
+  setUser: (user) => set({ user }),
 }));

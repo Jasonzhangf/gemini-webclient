@@ -23,12 +23,16 @@ const SettingsPage = () => {
   const setConfig = useAppStore((state) => state.setConfig);
 
   useEffect(() => {
-    const savedConfig = localStorage.getItem('geminiConfig');
-    if (savedConfig) {
-      const config = JSON.parse(savedConfig);
-      setApiKey(config.apiKey || '');
-      setModelName(config.modelName || 'gemini-pro-vision');
-    }
+    openGeminiDB().then(db => {
+      db.get('config', 'default').then(config => {
+        if (config) {
+          setApiKey(config.apiKey || '');
+          setModelName(config.modelName || 'gemini-pro-vision');
+        }
+      }).catch(error => {
+        console.error('Failed to load config:', error);
+      });
+    });
   }, []);
 
   const handleSubmit = () => {

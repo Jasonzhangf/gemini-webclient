@@ -62,22 +62,6 @@ const ChatWindow = () => {
     try {
       const model = getModel();
 
-      // 获取当前配置并显示
-      const savedConfig = localStorage.getItem('geminiConfig');
-      if (savedConfig) {
-        const config = JSON.parse(savedConfig);
-        const configMessage: ChatMessage = {
-          id: Date.now().toString(),
-          role: 'system',
-          content: `当前配置信息：\n${JSON.stringify({
-            modelName: config.modelName,
-            generateConfig: config.generateConfig || {}
-          }, null, 2)}`,
-          timestamp: Date.now(),
-        };
-        addMessage(configMessage);
-      }
-
       const userMessage: ChatMessage = {
         id: Date.now().toString(),
         role: 'user',
@@ -137,8 +121,8 @@ const ChatWindow = () => {
 
   return (
     <Box h="full" display="flex" flexDirection="column">
-      <Box flex={1} overflowY="auto" p={4}>
-        <VStack spacing={4} align="stretch">
+      <Box flex={1} overflowY="auto" p={{ base: 2, md: 4 }}>
+        <VStack spacing={{ base: 2, md: 4 }} align="stretch">
           {currentSession?.messages.map((message) => (
             <Box
               key={message.id}
