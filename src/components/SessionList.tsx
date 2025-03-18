@@ -6,6 +6,7 @@ import {
   HStack,
   Input,
   Button,
+  useToast,
 } from '@chakra-ui/react';
 import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 import { useAppStore } from '../store';
@@ -13,6 +14,7 @@ import { ChatSession, openGeminiDB } from '../utils/db';
 import { useEffect, useState } from 'react';
 
 const SessionList = () => {
+  const toast = useToast();
   const { sessions, currentSession, setCurrentSession, setSessions } = useAppStore();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
@@ -71,14 +73,32 @@ const SessionList = () => {
   const deleteSession = async (sessionId: string) => {
     try {
       const db = await openGeminiDB();
-      await db.delete('sessions', sessionId);
+      const tx = db.transaction(['sessions'], 'readwrite');
+      
+      // 删除会话
+      await tx.objectStore('sessions').delete(sessionId);
+
+      await tx.done;
       const updatedSessions = sessions.filter((s) => s.id !== sessionId);
       setSessions(updatedSessions);
       if (currentSession?.id === sessionId) {
         setCurrentSession(updatedSessions[0] || null);
+        toast({
+          title: '已删除当前会话',
+          status: 'success',
+          duration: 2000,
+          isClosable: true,
+        });
       }
     } catch (error) {
       console.error('Failed to delete session:', error);
+      toast({
+        title: '删除会话失败',
+        description: error instanceof Error ? error.message : '数据库操作异常',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
 

@@ -43,6 +43,11 @@ interface GeminiDB extends DBSchema {
     value: ChatSession;
     indexes: { 'by-last-updated': number };
   };
+  messages: {
+    key: string;
+    value: ChatMessage;
+    indexes: { 'sessionId': string };
+  };
   commands: {
     key: string;
     value: UserCommand;
@@ -70,6 +75,9 @@ export const openGeminiDB = async () => {
         if (oldVersion < 1) {
           const sessionStore = db.createObjectStore('sessions', { keyPath: 'id' });
           sessionStore.createIndex('by-last-updated', 'lastUpdated');
+
+          const messageStore = db.createObjectStore('messages', { keyPath: 'id' });
+          messageStore.createIndex('sessionId', 'sessionId');
 
           const commandStore = db.createObjectStore('commands', { keyPath: 'id' });
           commandStore.createIndex('by-use-count', 'useCount');
