@@ -10,7 +10,6 @@ import ChatWindow from './components/ChatWindow';
 import ConfigModal from './components/ConfigModal';
 import SettingsPage from './components/SettingsPage';
 import LoginPage from './components/LoginPage';
-import RegisterPage from './components/RegisterPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import { SettingsIcon } from '@chakra-ui/icons';
 
@@ -90,7 +89,6 @@ function App() {
           <Router>
             <Routes>
               <Route path="/login" element={user?.isLoggedIn ? <Navigate to="/" /> : <LoginPage />} />
-              <Route path="/register" element={user?.isLoggedIn ? <Navigate to="/" /> : <RegisterPage />} />
               <Route
                 path="/*"
                 element={

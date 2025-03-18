@@ -42,18 +42,27 @@ export const useAppStore = create<AppState>((set) => ({
   logs: [],
   user: null,
 
-  setConfig: (config) => {
-    openGeminiDB().then(db => {
-      db.put('config', { ...config, id: 'default' }).catch(error => {
-        console.error('Failed to save config:', error);
-      });
-    });
-    set({ config, isConfigured: true });
+  setConfig: async (config) => {
+    try {
+      const db = await openGeminiDB();
+      if (!db) {
+        throw new Error('数据库初始化失败，请检查浏览器是否支持IndexedDB');
+      }
+      await db.put('config', { ...config, id: 'default' });
+      set({ config, isConfigured: true, showConfig: false });
+    } catch (error) {
+      console.error('配置保存失败:', error);
+      set(state => ({
+        ...state,
+        isConfigured: false,
+        logs: [...state.logs, { timestamp: Date.now(), level: 'error', message: '配置保存失败，请检查浏览器是否支持IndexedDB或刷新页面重试', details: error }]
+      }));
+    }
   },
   setSessions: (sessions) => set({ sessions }),
   setShowConfig: (show) => set({ showConfig: show }),
   setCurrentSession: (session) => set({ currentSession: session }),
-  addMessage: (message) =>
+  addMessage: (message) => {
     set((state) => {
       if (!state.currentSession) return state;
       const updatedSession = {
@@ -62,25 +71,54 @@ export const useAppStore = create<AppState>((set) => ({
         lastMessage: message.content,
         lastUpdated: Date.now(),
       };
-      // 自动保存会话到数据库
-      openGeminiDB().then(db => {
-        db.put('sessions', updatedSession).catch(error => {
-          console.error('Failed to save session:', error);
-          state.addLog('error', '保存会话失败', error);
-        });
-      });
-      return {
+      
+      // 立即更新UI状态
+      const newState = {
         currentSession: updatedSession,
         sessions: state.sessions.map((s) =>
           s.id === updatedSession.id ? updatedSession : s
         ),
       };
-    }),
-  updateSession: (session) =>
-    set((state) => ({
-      sessions: state.sessions.map((s) => (s.id === session.id ? session : s)),
-      currentSession: state.currentSession?.id === session.id ? session : state.currentSession,
-    })),
+
+      // 异步保存到数据库
+      (async () => {
+        try {
+          const db = await openGeminiDB();
+          if (!db) {
+            throw new Error('数据库初始化失败，请检查浏览器是否支持IndexedDB');
+          }
+          await db.put('sessions', updatedSession);
+        } catch (error) {
+          console.error('保存会话失败:', error);
+          set(state => ({
+            ...state,
+            logs: [...state.logs, { timestamp: Date.now(), level: 'error', message: '保存会话失败，请检查浏览器是否支持IndexedDB或刷新页面重试', details: error }]
+          }));
+        }
+      })();
+
+      return newState;
+    });
+  },
+  updateSession: async (session) => {
+    try {
+      const db = await openGeminiDB();
+      if (!db) {
+        throw new Error('数据库初始化失败，请检查浏览器是否支持IndexedDB');
+      }
+      await db.put('sessions', session);
+      set((state) => ({
+        sessions: state.sessions.map((s) => (s.id === session.id ? session : s)),
+        currentSession: state.currentSession?.id === session.id ? session : state.currentSession,
+      }));
+    } catch (error) {
+      console.error('更新会话失败:', error);
+      set(state => ({
+        ...state,
+        logs: [...state.logs, { timestamp: Date.now(), level: 'error', message: '更新会话失败，请检查浏览器是否支持IndexedDB或刷新页面重试', details: error }]
+      }));
+    }
+  },
   addLog: (level, message, details) =>
     set((state) => ({
       logs: [...state.logs, { timestamp: Date.now(), level, message, details }],

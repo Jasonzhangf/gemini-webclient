@@ -18,7 +18,7 @@ import { initGemini } from '../config/gemini';
 const SettingsPage = () => {
   const toast = useToast();
   const [apiKey, setApiKey] = useState('');
-  const [modelName, setModelName] = useState('gemini-pro-vision');
+  const [modelName, setModelName] = useState('gemini-2.0-flash-exp-image-generation');
 
   const setConfig = useAppStore((state) => state.setConfig);
 
@@ -27,7 +27,7 @@ const SettingsPage = () => {
       db.get('config', 'default').then(config => {
         if (config) {
           setApiKey(config.apiKey || '');
-          setModelName(config.modelName || 'gemini-pro-vision');
+          setModelName(config.modelName || 'gemini-2.0-flash-exp-image-generation');
         }
       }).catch(error => {
         console.error('Failed to load config:', error);
@@ -84,7 +84,7 @@ const SettingsPage = () => {
                   <Input
                     value={modelName}
                     onChange={(e) => setModelName(e.target.value)}
-                    placeholder="默认: gemini-pro-vision"
+                    placeholder="默认: gemini-2.0-flash-exp-image-generation"
                   />
                 </FormControl>
                 <Button

@@ -19,7 +19,7 @@ import { initGemini } from '../config/gemini';
 const ConfigModal = () => {
   const toast = useToast();
   const [apiKey, setApiKey] = useState('');
-  const [modelName, setModelName] = useState('gemini-pro-vision');
+  const [modelName, setModelName] = useState('gemini-2.0-flash-exp-image-generation');
 
   useEffect(() => {
     const savedConfig = localStorage.getItem('geminiConfig');
@@ -89,7 +89,7 @@ const ConfigModal = () => {
               <Input
                 value={modelName}
                 onChange={(e) => setModelName(e.target.value)}
-                placeholder="默认: gemini-pro-vision"
+                placeholder="默认: gemini-2.0-flash-exp-image-generation"
               />
             </FormControl>
           </VStack>

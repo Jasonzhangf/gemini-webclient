@@ -13,7 +13,7 @@ import { AttachmentIcon, DeleteIcon } from '@chakra-ui/icons';
 import { useState, useRef, useEffect } from 'react';
 import { useAppStore } from '../store';
 import { getModel } from '../config/gemini';
-import { ChatMessage, openGeminiDB } from '../utils/db';
+import { ChatMessage } from '../utils/db';
 
 const ChatWindow = () => {
   const toast = useToast();
@@ -61,7 +61,13 @@ const ChatWindow = () => {
     setIsLoading(true);
     try {
       const model = getModel();
-
+      // 显示当前使用的模型配置
+      toast({
+        title: '当前模型配置',
+        description: '正在使用的模型配置已打印到控制台',
+        status: 'info',
+        duration: 2000,
+      });
       const userMessage: ChatMessage = {
         id: Date.now().toString(),
         role: 'user',
@@ -86,33 +92,38 @@ const ChatWindow = () => {
 
       const result = await model.generateContent([input, ...imagesParts]);
       const response = await result.response;
-      const text = response.text();
-      const candidates = response.candidates || [];
-      const parts = candidates[0]?.content?.parts || [];
       
-      if (!text && !parts.some(part => part.inlineData?.mimeType?.startsWith('image/'))) {
+      if (!response.text) {
         throw new Error('未收到AI的回复');
       }
 
       const modelMessage: ChatMessage = {
         id: Date.now().toString(),
         role: 'model',
-        content: text || '',
+        content: response.text(),
         timestamp: Date.now(),
-        images: parts
-          .filter(part => part.inlineData?.mimeType?.startsWith('image/'))
-          .map(part => `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`) || []
+        images: response.candidates?.[0]?.content?.parts
+          ?.filter(part => part.inlineData?.mimeType?.startsWith('image/'))          ?.map(part => `data:${part.inlineData?.mimeType};base64,${part.inlineData?.data}`) || [],
       };
+      await new Promise(resolve => setTimeout(resolve, 100)); // 确保UI更新完成
       addMessage(modelMessage);
 
       setInput('');
       setImages([]);
     } catch (error) {
+      let errorMessage = '未知错误';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        // 针对模型弃用的特殊错误处理
+        if (errorMessage.includes('has been deprecated')) {
+          errorMessage = '当前模型已被弃用，请在设置中更换为其他可用模型（如 gemini-1.5-flash）';
+        }
+      }
       toast({
         title: '发送失败',
-        description: error instanceof Error ? error.message : '未知错误',
+        description: errorMessage,
         status: 'error',
-        duration: 3000,
+        duration: 5000,
       });
     } finally {
       setIsLoading(false);
@@ -121,8 +132,8 @@ const ChatWindow = () => {
 
   return (
     <Box h="full" display="flex" flexDirection="column">
-      <Box flex={1} overflowY="auto" p={{ base: 2, md: 4 }}>
-        <VStack spacing={{ base: 2, md: 4 }} align="stretch">
+      <Box flex={1} overflowY="auto" p={4}>
+        <VStack spacing={4} align="stretch">
           {currentSession?.messages.map((message) => (
             <Box
               key={message.id}
@@ -131,8 +142,6 @@ const ChatWindow = () => {
               borderRadius="md"
               alignSelf={message.role === 'user' ? 'flex-end' : 'flex-start'}
               maxW="70%"
-              cursor="pointer"
-              title="双击复用此消息"
             >
               {message.images?.map((image, index) => (
                 <Image
@@ -141,19 +150,12 @@ const ChatWindow = () => {
                   maxH="200px"
                   mb={2}
                   borderRadius="md"
-                  onDoubleClick={(e) => {
-                    e.stopPropagation();
-                    setImages([image]);
-                  }}
+                  onDoubleClick={() => setImages(prev => [...prev, image])}
+                  cursor="pointer"
+                  title="双击添加到发送区域"
                 />
               ))}
-              <Text onDoubleClick={(e) => {
-                e.stopPropagation();
-                setInput(message.content);
-                if (message.images?.length) {
-                  setImages(message.images);
-                }
-              }}>{message.content}</Text>
+              <Text onDoubleClick={() => setInput(message.content)}>{message.content}</Text>
             </Box>
           ))}
           <div ref={messagesEndRef} />

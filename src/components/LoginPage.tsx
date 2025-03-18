@@ -10,12 +10,10 @@ import {
   useToast,
   Center,
   Heading,
-  Text,
-  Link as ChakraLink,
 } from '@chakra-ui/react';
-import { Link } from 'react-router-dom';
 import { useAppStore } from '../store';
-import { openGeminiDB } from '../utils/db';
+import fs from 'fs';
+import path from 'path';
 
 interface LoginFormData {
   username: string;
@@ -34,33 +32,33 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const db = await openGeminiDB();
     
     try {
-      const user = await db.get('users', formData.username);
-      if (!user || user.password !== formData.password) {
-        toast({
-          title: '登录失败',
-          description: '用户名或密码错误',
-          status: 'error',
-          duration: 3000,
-          isClosable: true,
-        });
-        return;
-      }
-
-      setUser({
-        username: user.username,
-        isLoggedIn: true,
-        rememberMe: formData.rememberMe,
+      const configPath = path.join(process.cwd(), 'config.ini');
+      const configContent = fs.readFileSync(configPath, 'utf-8');
+      const configLines = configContent.split('\n');
+      const configData: { [key: string]: string } = {};
+      
+      configLines.forEach(line => {
+        const [key, value] = line.split('=');
+        if (key && value) {
+          configData[key.trim()] = value.trim();
+        }
       });
 
-      if (formData.rememberMe) {
-        localStorage.setItem('userAuth', JSON.stringify({
-          username: user.username,
+      if (formData.username === configData.USER1 && formData.password === configData.PASSWORD1) {
+        setUser({
+          username: formData.username,
           isLoggedIn: true,
-        }));
-      }
+          rememberMe: formData.rememberMe,
+        });
+
+        if (formData.rememberMe) {
+          localStorage.setItem('userAuth', JSON.stringify({
+            username: formData.username,
+            isLoggedIn: true,
+          }));
+        }
 
       toast({
         title: '登录成功',
@@ -68,6 +66,16 @@ export default function LoginPage() {
         duration: 2000,
         isClosable: true,
       });
+    } else {
+      toast({
+        title: '登录失败',
+        description: '用户名或密码错误',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
     } catch (error) {
       console.error('Login error:', error);
       toast({
@@ -118,12 +126,6 @@ export default function LoginPage() {
               <Button type="submit" colorScheme="blue" width="full">
                 登录
               </Button>
-              <Text textAlign="center">
-                还没有账号？
-                <ChakraLink as={Link} to="/register" color="blue.500">
-                  立即注册
-                </ChakraLink>
-              </Text>
             </VStack>
           </form>
         </VStack>
